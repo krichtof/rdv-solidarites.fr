@@ -13,6 +13,7 @@ class PlageOuverture < ApplicationRecord
 
   validate :end_after_start
   validates :motifs, :title, presence: true
+  # caution :warn_overlapping_plage_ouverture
 
   has_many :webhook_endpoints, through: :organisation
 
@@ -63,11 +64,44 @@ class PlageOuverture < ApplicationRecord
     update_column(:expired_cached, expired?)
   end
 
+  def time_range
+    return nil unless exceptionnelle?
+
+    starts_at..ends_at
+  end
+
+  def weeks_difference_with(other)
+    other.first_day.cweek - first_day.cweek +
+      ((other.first_day.year - first_day.year) * 52)
+  end
+
+  def overlaps?(other)
+    if exceptionnelle? && other.exceptionnelle?
+      starts_at < other.ends_at && ends_at > other.starts_at
+    elsif recurring? && other.exceptionnelle?
+      return false if defined?(end_day) && end_day.present? && other.exceptionnelle? && other.first_day < end_day
+
+      return false unless recurrence_opts[:day].include?(other.first_day.wday)
+
+      return false unless recurrence_opts[:every] == :week # months unsupported yet
+
+      return false if weeks_difference_with(other) % recurrence_opts[:interval] != 0
+
+      start_time < other.end_time && end_time > other.start_time
+    end
+  end
+
   private
 
   def end_after_start
     return if end_time.blank? || start_time.blank?
 
     errors.add(:end_time, "doit être après l'heure de début") if end_time <= start_time
+  end
+
+  def warn_overlapping_plage_ouverture
+    return if false
+    warnings.add(:base, "Une plage d'ouverture existante recoupe ces dates.", active: true)
+    warnings.add(:base, "Une plage d'ouverture existante recoupe ces dates.", active: true)
   end
 end

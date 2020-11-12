@@ -153,4 +153,93 @@ describe PlageOuverture, type: :model do
       plage_ouverture.save!
     end
   end
+
+  describe "#overlaps?" do
+    let(:monday) { Time.parse("2020-11-09") }
+
+    before { plage_ouverture_1.overlaps?(plage_ouverture_2) == plage_ouverture_2.overlaps?(plage_ouverture_1) }
+    subject { plage_ouverture_1.overlaps?(plage_ouverture_2) }
+
+    context "both exceptionnelles" do
+      let(:plage_ouverture_1) { build(:plage_ouverture, first_day: monday, start_time: Tod::TimeOfDay.new(14), end_time: Tod::TimeOfDay.new(18)) }
+
+      context "exactly overlapping" do
+        let(:plage_ouverture_2) { build(:plage_ouverture, first_day: monday, start_time: Tod::TimeOfDay.new(14), end_time: Tod::TimeOfDay.new(18)) }
+        it { should eq true }
+      end
+
+      context "included in other" do
+        let(:plage_ouverture_2) { build(:plage_ouverture, first_day: monday, start_time: Tod::TimeOfDay.new(15), end_time: Tod::TimeOfDay.new(16)) }
+        it { should eq true }
+      end
+
+      context "includes other" do
+        let(:plage_ouverture_2) { build(:plage_ouverture, first_day: monday, start_time: Tod::TimeOfDay.new(8), end_time: Tod::TimeOfDay.new(20)) }
+        it { should eq true }
+      end
+
+      context "partially overlapping start" do
+        let(:plage_ouverture_2) { build(:plage_ouverture, first_day: monday, start_time: Tod::TimeOfDay.new(8), end_time: Tod::TimeOfDay.new(16)) }
+        it { should eq true }
+      end
+
+      context "partially overlapping end" do
+        let(:plage_ouverture_2) { build(:plage_ouverture, first_day: monday, start_time: Tod::TimeOfDay.new(16), end_time: Tod::TimeOfDay.new(20)) }
+        it { should eq true }
+      end
+
+      context "non overlapping same day" do
+        let(:plage_ouverture_2) { build(:plage_ouverture, first_day: monday, start_time: Tod::TimeOfDay.new(8), end_time: Tod::TimeOfDay.new(12)) }
+        it { should eq false }
+      end
+
+      context "non overlapping other day" do
+        let(:plage_ouverture_2) { build(:plage_ouverture, first_day: monday + 1.day, start_time: Tod::TimeOfDay.new(14), end_time: Tod::TimeOfDay.new(18)) }
+        it { should eq false }
+      end
+    end
+
+    context "one recurring without end date, one exceptionnelle" do
+      let(:plage_ouverture_1) { build(:plage_ouverture, first_day: monday, start_time: Tod::TimeOfDay.new(14), end_time: Tod::TimeOfDay.new(18), recurrence: Montrose.weekly.on([:monday, :tuesday]).to_json) }
+
+      context "exceptionnelle before recurring" do
+        let(:plage_ouverture_2) { build(:plage_ouverture, first_day: monday - 7.days, start_time: Tod::TimeOfDay.new(14), end_time: Tod::TimeOfDay.new(18)) }
+        it { should eq false }
+      end
+
+      context "exceptionnelle on other day same week" do
+        let(:plage_ouverture_2) { build(:plage_ouverture, first_day: monday + 3.days, start_time: Tod::TimeOfDay.new(14), end_time: Tod::TimeOfDay.new(18)) }
+        it { should eq false }
+      end
+
+      context "exceptionnelle on other day next week" do
+        let(:plage_ouverture_2) { build(:plage_ouverture, first_day: monday + 3.days, start_time: Tod::TimeOfDay.new(14), end_time: Tod::TimeOfDay.new(18)) }
+        it { should eq false }
+      end
+
+      context "exceptionnelle on same day but times don't overlap" do
+        let(:plage_ouverture_2) { build(:plage_ouverture, first_day: monday + 8.days, start_time: Tod::TimeOfDay.new(8), end_time: Tod::TimeOfDay.new(10)) }
+        it { should eq false }
+      end
+
+      context "exceptionnelle on same day and times overlap" do
+        let(:plage_ouverture_2) { build(:plage_ouverture, first_day: monday + 8.days, start_time: Tod::TimeOfDay.new(15), end_time: Tod::TimeOfDay.new(20)) }
+        it { should eq true }
+      end
+    end
+
+    context "one recurring every 3 weeks without end date, one exceptionnelle" do
+      let(:plage_ouverture_1) { build(:plage_ouverture, first_day: monday, start_time: Tod::TimeOfDay.new(14), end_time: Tod::TimeOfDay.new(18), recurrence: Montrose.every(3.weeks).on([:monday, :tuesday]).to_json) }
+
+      context "exceptionnelle on same week day 6 weeks after" do
+        let(:plage_ouverture_2) { build(:plage_ouverture, first_day: monday + (7 * 6).days, start_time: Tod::TimeOfDay.new(14), end_time: Tod::TimeOfDay.new(18)) }
+        it { should eq true }
+      end
+
+      context "exceptionnelle on same week day 4 weeks after" do
+        let(:plage_ouverture_2) { build(:plage_ouverture, first_day: monday + (7 * 4).days, start_time: Tod::TimeOfDay.new(14), end_time: Tod::TimeOfDay.new(18)) }
+        it { should eq false }
+      end
+    end
+  end
 end

@@ -1,7 +1,17 @@
-- if model.errors.any?
+- if model.warnings_need_confirmation?
+  .mb-1 Avertissements :
+  .alert.alert-warning.alert-dismissible.fade.show
+    ul.m-0
+      - model.warnings.each do |key, msg|
+        li=msg
+
+  .text-muted Ces avertissements ne sont pas bloquants, vous pouvez les ignorer en confirmant
+  .text-right= f.submit "Confirmer", class: "btn btn-warning"
+
+  hr
+
+- elsif model.errors.any?
   .alert.alert-danger.alert-dismissible.fade.show
-    a.close(href="#" data-dismiss="alert")
-      i.fa.fa-times
     ul.m-0
       - errors_full_messages(model).each do |msg|
         li=msg

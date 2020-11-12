@@ -40,6 +40,10 @@ module RecurrenceConcern
     recurrence.nil?
   end
 
+  def recurring?
+    recurrence.present?
+  end
+
   def occurences_for(inclusive_date_range)
     recurrence_until = recurrence&.to_hash&.[](:until)
     min_until = [inclusive_date_range.end, recurrence_until].compact.min.to_time.end_of_day
@@ -57,6 +61,10 @@ module RecurrenceConcern
     occurences_for(inclusive_date_range).map do |occurence|
       occurence.starts_at..(occurence.ends_at)
     end
+  end
+
+  def recurrence_opts
+    { interval: 1 }.merge(recurrence.default_options.to_h)
   end
 
   private

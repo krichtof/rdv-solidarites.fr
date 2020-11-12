@@ -38,6 +38,7 @@ gem "daemons"
 gem "simple_form", "~> 5.0"
 gem "image_processing", "~> 1.8"
 gem "phonelib"
+gem 'activemodel-caution', path: "/Users/adipasquale/dev/activemodel-caution/"
 
 # Front
 gem "chartkick", "~> 3.4.0"
